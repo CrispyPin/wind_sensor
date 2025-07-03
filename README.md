@@ -20,10 +20,18 @@ As previously noted, these materials are just scraps I had, exact measurements a
 - Raspberry Pi Pico W/WH
 - bearing 25mm diameter
 - large, opaque plastic box
+- piece of wood ~2x2x14cm
+- 3mm & 5mm drill
+- wires
 
 ## Construction
 ### encoder pattern
-TODO
+- draw a circle on white paper big enough to fit the bearing (leaving 1mm of margin is a good idea)
+- draw concentric circles around it, increasing the radii by 1cm each time. you need one per sensor (3) (i made 4 because i was planning to use more sensors than i did)
+- divide the circles into 8ths
+- fill in the section like a [gray code](https://en.wikipedia.org/wiki/Gray_code#Position_encoders) (same as pictured, but skip the outermost circle)
+![img/encoder_pattern_grid.jpg]
+![img/encoder_pattern_filled.jpg]
 ### encoder plate
 - Cut 3 pieces of cardboard big to fit the encoder pattern with comfortable margin
 - glue 2 of them together with perpendicular grain directions
@@ -31,6 +39,7 @@ TODO
 - glue the third piece to the others, again with perpendicular grain to the side you stick it to
 - cut the outside into a rough circle, the same size as the encoder pattern
 - attach the patern to the plate on the side with a hole, as concentric as possible. Use masking tape to make it slightly adjustable
+![img/encoder_plate_blank.jpg]
 ### encoder
 TODO
 
