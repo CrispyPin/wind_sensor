@@ -1,0 +1,158 @@
+#include <stdint.h>
+#include "pico/stdlib.h"
+#include "pico/cyw43_arch.h"
+#include "pico/cyw43_driver.h"
+#include "hardware/adc.h"
+
+#include "lwip/tcp.h"
+#include "lwip/apps/http_client.h"
+
+#define u32 uint32_t
+#define u16 uint16_t
+#define u8 uint8_t
+
+char ssid[] = "TODO";
+char pass[] = "secret";
+
+const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 0, 108);
+#define SERVER_PORT 25564
+
+
+#define SET_LED(state) cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, state)
+
+struct tcp_pcb *tcp_controller;
+#define ENCODER_BITS 3
+u8 rotary_encoder_directon;
+u8 rotary_encoder_bits;
+u8 rotary_encoder_bit[ENCODER_BITS];
+u16 rotary_encoder_raw[ENCODER_BITS];
+u16 rotary_encoder_min[ENCODER_BITS];
+u16 rotary_encoder_max[ENCODER_BITS];
+u16 rotary_encoder_high[ENCODER_BITS];
+u16 rotary_encoder_low[ENCODER_BITS];
+// static const u32 encoder_adc_pins[ENCODER_BITS] = {26, 27, 28};
+
+
+void update_raw_values() {
+	for (int b = 0; b < ENCODER_BITS; b++) {
+		adc_select_input(b);
+		rotary_encoder_raw[b] = adc_read();
+	}
+}
+
+void calibrate_brightness() {
+	for (int b = 0; b < ENCODER_BITS; b++) {
+		rotary_encoder_min[b] = 0xffff;
+		rotary_encoder_max[b] = 0;
+	}
+	for (int i = 0; i < 300; i++) {
+		SET_LED(i & 2);
+		update_raw_values();
+		for (int b = 0; b < ENCODER_BITS; b++) {
+			if (rotary_encoder_raw[b] > rotary_encoder_max[b])
+				rotary_encoder_max[b] = rotary_encoder_raw[b];
+			else if (rotary_encoder_raw[b] < rotary_encoder_min[b])
+				rotary_encoder_min[b] = rotary_encoder_raw[b];
+		}
+		sleep_ms(25);
+	}
+	for (int b = 0; b < ENCODER_BITS; b++) {
+		u16 diff = rotary_encoder_max[b] - rotary_encoder_min[b];
+		rotary_encoder_low[b] = rotary_encoder_min[b] + diff / 3;
+		rotary_encoder_high[b] = rotary_encoder_max[b] - diff / 3;
+	}
+	SET_LED(1);
+	sleep_ms(500);
+	SET_LED(0);
+}
+
+void update_encoder_value() {
+	update_raw_values();
+	for (int b = 0; b < ENCODER_BITS; b++) {
+		if (rotary_encoder_raw[b] > rotary_encoder_high[b])
+			rotary_encoder_bit[b] = 1;
+		else if (rotary_encoder_raw[b] < rotary_encoder_low[b])
+			rotary_encoder_bit[b] = 0;
+	}
+	rotary_encoder_bits = 0;
+	for (int b = 0; b < ENCODER_BITS; b++) {
+		rotary_encoder_bits <<= 1;
+		rotary_encoder_bits |= !rotary_encoder_bit[b]; // inverse to make white = 0
+	}
+
+	// const u8 reverse_gray_code[1 << ENCODER_BITS] = {0, 1, 3, 2, 7, 6, 4, 5};
+	// gray code: 0 1 5 7 3 2 6 4
+	// index:     0 1 2 3 4 5 6 7
+	// reverse  : 0 1 5 4 7 2 6 3
+	const u8 reverse_gray_code[1 << ENCODER_BITS] = {0, 1, 5, 4, 7, 2, 6, 3};
+	rotary_encoder_directon = reverse_gray_code[rotary_encoder_bits];
+}
+
+static err_t connected_fn(void *arg, struct tcp_pcb *tpcb, err_t err) {
+	return ERR_OK;
+}
+
+void ensure_server_connection() {
+	while (tcp_controller->state != ESTABLISHED) {
+		int err = tcp_connect(tcp_controller, &SERVER_IP, SERVER_PORT, connected_fn);
+		while (err++) {
+			SET_LED(1);
+			sleep_ms(150);
+			SET_LED(0);
+			sleep_ms(300);
+		}
+	}
+}
+
+void send_data() {
+	ensure_server_connection();
+	u8 buf[] = "direction: X=X\n";
+	buf[11] = rotary_encoder_bits + '0';
+	buf[13] = rotary_encoder_directon + '0';
+	int err = tcp_write(tcp_controller, buf, 15, 0);
+}
+
+
+int main() {
+	adc_init();
+	adc_gpio_init(26);
+	adc_gpio_init(27);
+	adc_gpio_init(28);
+
+	if (cyw43_arch_init()) {
+		SET_LED(1);
+		sleep_ms(2000);
+		return -1;
+	}
+	cyw43_arch_enable_sta_mode();
+
+	int err = cyw43_arch_wifi_connect_timeout_ms(ssid, pass, CYW43_AUTH_WPA2_AES_PSK, 10000);
+	if (err) {
+		PICO_ERROR_BADAUTH; // jump to definition :)
+		while (err++) {
+			SET_LED(1);
+			sleep_ms(100);
+			SET_LED(0);
+			sleep_ms(100);
+		}
+		return -1;
+	}
+
+	tcp_controller = tcp_new_ip_type(IPADDR_TYPE_V4);
+	ensure_server_connection();
+	tcp_write(tcp_controller, "be gay do crime :3\n", 19, 0);
+	SET_LED(1);
+	sleep_ms(200);
+	update_raw_values();
+	SET_LED(0);
+
+
+	// tcp_controller->state
+	calibrate_brightness();
+
+	while (true) {
+		update_encoder_value();
+		send_data();
+		sleep_ms(500);
+	}
+}
