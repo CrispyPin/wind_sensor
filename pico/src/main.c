@@ -11,16 +11,25 @@
 #define u16 uint16_t
 #define u8 uint8_t
 
+// total calibration time. You must manually rotate the sensor around in this time,
+// so that every bit gets to read a high and low value
+#define CALIBRATION_MS 3000
+// milliseconds per measurement in calibration mode
+#define CALIBRATION_RESOLUTION 5
+
 char ssid[] = CONFIG_WIFI_SSID;
 char pass[] = CONFIG_WIFI_PASSWORD;
 
 const ip_addr_t SERVER_IP = CONFIG_SERVER_IP;
 #define SERVER_PORT CONFIG_SERVER_PORT
+struct tcp_pcb *tcp_controller;
 
 #define SET_LED(state) cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, state)
 
-struct tcp_pcb *tcp_controller;
+// increasing resolution is not possible without more components and logic, as the pico only has 3 analog inputs
+// (you'd also need to make the encoder pattern bigger etc)
 #define ENCODER_BITS 3
+
 u8 rotary_encoder_directon;
 u8 rotary_encoder_bits;
 u8 rotary_encoder_bit[ENCODER_BITS];
@@ -30,7 +39,6 @@ u16 rotary_encoder_max[ENCODER_BITS];
 u16 rotary_encoder_high[ENCODER_BITS];
 u16 rotary_encoder_low[ENCODER_BITS];
 // static const u32 encoder_adc_pins[ENCODER_BITS] = {26, 27, 28};
-
 
 void update_raw_values() {
 	for (int b = 0; b < ENCODER_BITS; b++) {
@@ -44,7 +52,7 @@ void calibrate_brightness() {
 		rotary_encoder_min[b] = 0xffff;
 		rotary_encoder_max[b] = 0;
 	}
-	for (int i = 0; i < 300; i++) {
+	for (int i = 0; i < CALIBRATION_MS / CALIBRATION_RESOLUTION; i++) {
 		SET_LED(i & 2);
 		update_raw_values();
 		for (int b = 0; b < ENCODER_BITS; b++) {
@@ -53,7 +61,7 @@ void calibrate_brightness() {
 			else if (rotary_encoder_raw[b] < rotary_encoder_min[b])
 				rotary_encoder_min[b] = rotary_encoder_raw[b];
 		}
-		sleep_ms(25);
+		sleep_ms(CALIBRATION_RESOLUTION);
 	}
 	for (int b = 0; b < ENCODER_BITS; b++) {
 		u16 diff = rotary_encoder_max[b] - rotary_encoder_min[b];
@@ -104,10 +112,10 @@ void ensure_server_connection() {
 
 void send_data() {
 	ensure_server_connection();
-	u8 buf[] = "direction: X=X\n";
-	buf[11] = rotary_encoder_bits + '0';
-	buf[13] = rotary_encoder_directon + '0';
-	int err = tcp_write(tcp_controller, buf, 15, 0);
+	u8 buf[] = "direction: X\n";
+	// buf[11] = rotary_encoder_bits + '0';
+	buf[11] = rotary_encoder_directon + '0';
+	int err = tcp_write(tcp_controller, buf, 13, 0);
 }
 
 
@@ -138,12 +146,11 @@ int main() {
 
 	tcp_controller = tcp_new_ip_type(IPADDR_TYPE_V4);
 	ensure_server_connection();
-	tcp_write(tcp_controller, "be gay do crime :3\n", 19, 0);
+	tcp_write(tcp_controller, "hello server :3\n", 19, 0);
 	SET_LED(1);
 	sleep_ms(200);
 	update_raw_values();
 	SET_LED(0);
-
 
 	// tcp_controller->state
 	calibrate_brightness();
