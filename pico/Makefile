@@ -5,6 +5,7 @@ build_thing: git_deps
 # then manually copy bin/thing.uf2 to the pico
 
 git_deps:
+	cd .. && git submodule update --init
 	cd ../pico-sdk && git submodule update --init lib/cyw43-driver lib/lwip
 
 clean:

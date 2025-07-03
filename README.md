@@ -49,7 +49,7 @@ I used VS code but you only need a terminal for building this.
 ### Pico firmware
 Requires the following software: `git`, `make`, `cmake` and a C compiler
 ```
-git clone https://git.crispypin.cc/CrispyPin/wind_station --recursive
+git clone https://git.crispypin.cc/CrispyPin/wind_station
 ```
 Now edit the file `pico/src/wifi_cred.h` and update the values accordingly.
 
