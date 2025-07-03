@@ -34,14 +34,19 @@ As previously noted, these materials are just scraps I had, exact measurements a
 ![](img/encoder_pattern_filled.jpg)
 ### encoder plate
 - Cut 3 pieces of cardboard big to fit the encoder pattern with comfortable margin
-- glue 2 of them together with perpendicular grain directions
-- cut a hole through the center, just big enough to friction-fit the bearing
-- glue the third piece to the others, again with perpendicular grain to the side you stick it to
-- cut the outside into a rough circle, the same size as the encoder pattern
-- attach the patern to the plate on the side with a hole, as concentric as possible. Use masking tape to make it slightly adjustable
+- Glue 2 of them together with perpendicular grain directions
+- Cut a hole through the center, just big enough to friction-fit the bearing
+- Glue the third piece to the others, again with perpendicular grain to the side you stick it to
+- Cut the outside into a rough circle, the same size as the encoder pattern
+- Attach the patern to the plate on the side with a hole, as concentric as possible. Use masking tape to make it slightly adjustable
 ![](img/encoder_plate_blank.jpg)
 ### encoder
-TODO
+- Attach the bearing off-center on the wood piece using a wood screw and a large nut or washers to make sure it doesn't scrape against the wood when rotating.
+- Drill 5mm holes about 1cm deep for the photoresistors, starting at 5mm from the bearing edge and 1cm apart
+- Drill 3mm holes all the way through, perpendicular to and intersecting the 5mm holes, this is for the photoresistor legs
+- Solder the components using the diagram below
+TODO diagram
+![](img/encoder.jpg)
 
 ## Computer setup
 I used VS code but you only need a terminal for building this.
