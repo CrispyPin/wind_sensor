@@ -3,20 +3,19 @@
 #include "pico/cyw43_arch.h"
 #include "pico/cyw43_driver.h"
 #include "hardware/adc.h"
-
 #include "lwip/tcp.h"
-#include "lwip/apps/http_client.h"
+
+#include "wifi_cred.h"
 
 #define u32 uint32_t
 #define u16 uint16_t
 #define u8 uint8_t
 
-char ssid[] = "TODO";
-char pass[] = "secret";
+char ssid[] = CONFIG_WIFI_SSID;
+char pass[] = CONFIG_WIFI_PASSWORD;
 
-const ip_addr_t SERVER_IP = IPADDR4_INIT_BYTES(192, 168, 0, 108);
-#define SERVER_PORT 25564
-
+const ip_addr_t SERVER_IP = CONFIG_SERVER_IP;
+#define SERVER_PORT CONFIG_SERVER_PORT
 
 #define SET_LED(state) cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, state)
 
@@ -80,7 +79,6 @@ void update_encoder_value() {
 		rotary_encoder_bits |= !rotary_encoder_bit[b]; // inverse to make white = 0
 	}
 
-	// const u8 reverse_gray_code[1 << ENCODER_BITS] = {0, 1, 3, 2, 7, 6, 4, 5};
 	// gray code: 0 1 5 7 3 2 6 4
 	// index:     0 1 2 3 4 5 6 7
 	// reverse  : 0 1 5 4 7 2 6 3
