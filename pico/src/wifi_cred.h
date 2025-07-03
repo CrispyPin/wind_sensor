@@ -1,4 +1,5 @@
 
+// case sensitive, and must be 2.4GHz
 #define CONFIG_WIFI_SSID "Wifi network here"
 #define CONFIG_WIFI_PASSWORD "password123"
 
