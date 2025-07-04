@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader};
 
-const IOT_BIND_ADDR: &str = "192.168.0.108:13122";
+const IOT_BIND_ADDR: &str = "0.0.0.0:13122";
 //const HTTP_BIND_ADDR: &str = "192.168.0.108:80";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
