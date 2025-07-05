@@ -89,7 +89,7 @@ Further reading: https://permacomputing.net/principles/ :3
 TODO
 
 ## Connectivity
-Data is sent every TODO seconds over WiFi, using a raw TCP pipe. Since the data is so simple, I figured there was no point using MQTT or HTTP, since I have nothing else to connect to it. A less complicated protocol means marginally lower power usage, and easier implementation without dependencies.
+Data is sent every 5 seconds over WiFi, using a raw TCP pipe. Since the data is so simple, I figured there was no point using MQTT or HTTP, since I have nothing else that will use the data. A less complicated protocol means marginally lower power usage, and easier implementation without dependencies.
 
 ## Presenting the data
 TODO

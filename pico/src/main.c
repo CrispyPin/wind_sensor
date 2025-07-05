@@ -17,6 +17,18 @@
 // milliseconds per measurement in calibration mode
 #define CALIBRATION_RESOLUTION 5
 
+// effective time per packet is these two multiplied
+#define MEASURE_INTERVAL_MS 100
+#define DATA_PER_PACKET 50
+// --- end of configuration ---
+
+// #define PACKET_SIZE (DATA_PER_PACKET + PACKET_HEADER_LEN + 1)
+#define PACKET_HEADER_LEN 5
+const char PACKET_HEADER[PACKET_HEADER_LEN] = "wind:";
+const char PACKET_TAIL = '\n';
+u8 packet_data[DATA_PER_PACKET];
+u32 packet_fill;
+
 char ssid[] = CONFIG_WIFI_SSID;
 char pass[] = CONFIG_WIFI_PASSWORD;
 
@@ -29,7 +41,6 @@ struct tcp_pcb *tcp_controller;
 // increasing resolution is not possible without more components and logic, as the pico only has 3 analog inputs
 // (you'd also need to make the encoder pattern bigger etc)
 #define ENCODER_BITS 3
-
 u8 rotary_encoder_directon;
 u8 rotary_encoder_bits;
 u8 rotary_encoder_bit[ENCODER_BITS];
@@ -53,7 +64,7 @@ void calibrate_brightness() {
 		rotary_encoder_max[b] = 0;
 	}
 	for (int i = 0; i < CALIBRATION_MS / CALIBRATION_RESOLUTION; i++) {
-		SET_LED(i & 2);
+		SET_LED(i & 4);
 		update_raw_values();
 		for (int b = 0; b < ENCODER_BITS; b++) {
 			if (rotary_encoder_raw[b] > rotary_encoder_max[b])
@@ -99,11 +110,14 @@ static err_t connected_fn(void *arg, struct tcp_pcb *tpcb, err_t err) {
 }
 
 void ensure_server_connection() {
+	// TODO fix not able to reconnect
 	while (tcp_controller->state != ESTABLISHED) {
+		// if (tcp_controller) if(tcp_close(tcp_controller)) SET_LED(1);
+		// tcp_controller = tcp_new_ip_type(IPADDR_TYPE_V4);
 		int err = tcp_connect(tcp_controller, &SERVER_IP, SERVER_PORT, connected_fn);
 		while (err++) {
 			SET_LED(1);
-			sleep_ms(150);
+			sleep_ms(100);
 			SET_LED(0);
 			sleep_ms(300);
 		}
@@ -112,10 +126,12 @@ void ensure_server_connection() {
 
 void send_data() {
 	ensure_server_connection();
-	u8 buf[] = "direction: X\n";
-	// buf[11] = rotary_encoder_bits + '0';
-	buf[11] = rotary_encoder_directon + '0';
-	int err = tcp_write(tcp_controller, buf, 13, 0);
+	// u8 buf[] = "direction: X\n";
+	// buf[11] = rotary_encoder_directon + '0';
+	// int err = tcp_write(tcp_controller, buf, 13, 0);
+	tcp_write(tcp_controller, PACKET_HEADER, PACKET_HEADER_LEN, 0);
+	tcp_write(tcp_controller, packet_data, DATA_PER_PACKET, 0);
+	tcp_write(tcp_controller, &PACKET_TAIL, 1, 0);
 }
 
 
@@ -155,9 +171,15 @@ int main() {
 	// tcp_controller->state
 	calibrate_brightness();
 
+	u32 next_measurement_time = time_us_64();
 	while (true) {
+		sleep_until(next_measurement_time);
+		next_measurement_time += MEASURE_INTERVAL_MS * 1000;
 		update_encoder_value();
-		send_data();
-		sleep_ms(500);
+		packet_data[packet_fill++] = rotary_encoder_directon + '0';
+		if (packet_fill == DATA_PER_PACKET){
+			send_data();
+			packet_fill = 0;
+		}
 	}
 }
