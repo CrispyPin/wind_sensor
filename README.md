@@ -50,7 +50,7 @@ As previously noted, these materials are just scraps I had, exact measurements a
 - Drill 5mm holes about 1cm deep for the photoresistors, starting at 5mm from the bearing edge and 1cm apart
 - Drill 3mm holes all the way through, perpendicular to and intersecting the 5mm holes, this is for the photoresistor legs
 - Solder the components using the diagram below
-TODO diagram
+![](img/horrible_sensor_wiring_diagram.png)
 ![](img/encoder.jpg)
 ## full assembly
 TODO
