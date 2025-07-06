@@ -12,6 +12,8 @@ const HTTP_BIND_ADDR: &str = "127.0.0.1:8069";
 const DATA_FILE_PATH: &str = "saved.txt";
 const HTML_TEMPLATE_PATH: &str = "template.html";
 const HTML_REPLACE_TOKEN: &str = "CONTENT_HERE";
+const BAR_BG: &str = "#222";
+const BAR_FG: &str = "#93e";
 type Batch = (u128, Vec<u8>);
 
 fn main() {
@@ -26,7 +28,11 @@ fn main() {
             .flatten()
         {
             println!("connected to {:?}", stream.peer_addr());
-            let mut out_file = File::options().append(true).open(DATA_FILE_PATH).unwrap();
+            let mut out_file = File::options()
+                .append(true)
+                .create(true)
+                .open(DATA_FILE_PATH)
+                .unwrap();
             let reader = BufReader::new(&stream);
             stream
                 .set_read_timeout(Some(Duration::from_secs(TIMEOUT_SECONDS)))
@@ -81,8 +87,50 @@ fn main() {
 }
 
 fn generate_visualisation(all_data: &[Batch]) -> String {
-    //TODO
-    String::new()
+    let mut sums = [0; 8];
+    let mut total_points = 0;
+    for batch in all_data {
+        for &d in &batch.1 {
+            sums[d as usize] += 1;
+            total_points += 1;
+        }
+    }
+    let mut percentages = [0.0; 8];
+    if total_points > 0 {
+        for d in 0..8 {
+            let p = sums[d] as f64 / total_points as f64;
+            percentages[d] = p * 100.;
+        }
+    }
+
+    let mut out = String::from("<table><tr class=\"bars\">\n");
+    for d in 0..8 {
+        out.push_str(&format!(
+            "<td style=\"background: linear-gradient({1} {0:.2}%, {2} {0:.2}%);\"></td>\n",
+            100. - percentages[d],
+            BAR_BG,
+            BAR_FG
+        ));
+    }
+    out.push_str("</tr><tr>\n");
+    for d in 0..8 {
+        out.push_str(&format!("<td>{d}</td>\n"));
+    }
+    out.push_str("</tr><tr>\n");
+    for d in 0..8 {
+        out.push_str(&format!("<td>{:.1}%</td>\n", percentages[d]));
+    }
+    out.push_str("</tr></table>\n");
+
+    if let Some((time, data)) = all_data.last() {
+        out.push_str(&format!(
+            "<p>last known direction: {} at {} (UTC)</p>",
+            data.last().unwrap_or(&0),
+            formatted_time((time / 1000) as u64)
+        ));
+    }
+
+    out
 }
 
 fn parse_pico_message(msg: &str) -> Option<Batch> {
@@ -94,4 +142,44 @@ fn parse_pico_message(msg: &str) -> Option<Batch> {
     let values = values.chars().map(|c| c as u8 - b'0').collect();
 
     Some((timestamp, values))
+}
+
+fn formatted_time(unix_time: u64) -> String {
+    // i wrote this ages ago and don't dare touch it :)
+    let second = unix_time % 60;
+    let minute = unix_time / 60 % 60;
+    let hour = unix_time / 3600 % 24;
+
+    let days_since_epoch = unix_time / (3600 * 24);
+    let years_since_epoch = (days_since_epoch * 400) / 146097;
+    // 365.2425 days per year
+    /*
+    days = years * 365 + years/4 + years/400 - years/100
+    d = y*365 + y/4 + y/400 - y/100
+    d = (365y*400)/400 + 100y/400 + y/400 - 4y/400
+    d*400 = (365y*400) + 100y + y - 4y
+    d*400 = 400*365*y + 97*y
+    d*400 = y* (400*365 + 97)
+    d*400 = y*146097
+    years = (days * 400) / 146097
+    */
+    let year = years_since_epoch + 1970;
+
+    let is_leap_year = (year % 4 == 0) && !((year % 100 == 0) && !(year % 400 == 0));
+    let feb = if is_leap_year { 29 } else { 28 };
+    let month_lengths = [31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+    let leap_days = years_since_epoch / 4;
+    let mut day = days_since_epoch - leap_days - years_since_epoch * 365;
+    let mut month = 0;
+    for i in 0..12 {
+        if day < month_lengths[i] {
+            month = i + 1;
+            day = day + 1;
+            break;
+        }
+        day -= month_lengths[i];
+    }
+
+    format!("{year}-{month:02}-{day:02}_{hour:02}:{minute:02}:{second:02}")
 }
