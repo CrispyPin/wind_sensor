@@ -17,8 +17,20 @@ const BAR_FG: &str = "#93e";
 type Batch = (u128, Vec<u8>);
 
 fn main() {
-    // todo read old data
+    // read old data
     let mut all_data = Vec::new();
+    if let Ok(text) = fs::read_to_string(DATA_FILE_PATH) {
+        for line in text.lines() {
+            let Some((timestamp, values)) = line.split_once(':') else {
+                continue;
+            };
+            all_data.push((
+                timestamp.parse().unwrap(),
+                values.bytes().map(|b| b - b'0').collect(),
+            ));
+        }
+    }
+
     let (pipe_in, pipe_out) = mpsc::channel();
     let _sensor_data_thread = thread::spawn(move || {
         println!("listening on {IOT_BIND_ADDR} for connection from pico");
@@ -181,5 +193,5 @@ fn formatted_time(unix_time: u64) -> String {
         day -= month_lengths[i];
     }
 
-    format!("{year}-{month:02}-{day:02}_{hour:02}:{minute:02}:{second:02}")
+    format!("{year}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}")
 }
