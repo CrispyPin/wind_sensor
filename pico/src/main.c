@@ -126,9 +126,6 @@ void ensure_server_connection() {
 
 void send_data() {
 	ensure_server_connection();
-	// u8 buf[] = "direction: X\n";
-	// buf[11] = rotary_encoder_directon + '0';
-	// int err = tcp_write(tcp_controller, buf, 13, 0);
 	tcp_write(tcp_controller, PACKET_HEADER, PACKET_HEADER_LEN, 0);
 	tcp_write(tcp_controller, packet_data, DATA_PER_PACKET, 0);
 	tcp_write(tcp_controller, &PACKET_TAIL, 1, 0);
@@ -150,7 +147,7 @@ int main() {
 
 	int err = cyw43_arch_wifi_connect_timeout_ms(ssid, pass, CYW43_AUTH_WPA2_AES_PSK, 10000);
 	if (err) {
-		PICO_ERROR_BADAUTH; // jump to definition :)
+		PICO_ERROR_BADAUTH; // jump to definition to figure out whats wrong :)
 		while (err++) {
 			SET_LED(1);
 			sleep_ms(100);
@@ -168,15 +165,14 @@ int main() {
 	update_raw_values();
 	SET_LED(0);
 
-	// tcp_controller->state
 	calibrate_brightness();
 
 	u32 next_measurement_time = time_us_64();
 	while (true) {
 		sleep_until(next_measurement_time);
-		next_measurement_time += MEASURE_INTERVAL_MS * 1000;
+		next_measurement_time += MEASURE_INTERVAL_MS * 1000; // millis to micros
 		update_encoder_value();
-		packet_data[packet_fill++] = rotary_encoder_directon + '0';
+		packet_data[packet_fill++] = rotary_encoder_directon + '0'; // convert number to ascii digit
 		if (packet_fill == DATA_PER_PACKET){
 			send_data();
 			packet_fill = 0;
